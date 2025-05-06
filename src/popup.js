@@ -94,10 +94,12 @@ function handleLogout() {
   
   // Add loading state
   logoutBtn.disabled = true;
+  logoutBtn.textContent = 'Signing out...';
   
   chrome.runtime.sendMessage({ action: 'logout' }, (response) => {
     // Remove loading state
     logoutBtn.disabled = false;
+    logoutBtn.textContent = 'Sign out';
     
     if (chrome.runtime.lastError) {
       console.error('Logout error:', chrome.runtime.lastError);
@@ -173,7 +175,7 @@ function handleAISummary() {
 }
 
 // Update UI based on authentication status
-function updateAuthUI(authenticated, email = 'AxelNash4@gmail.com') {
+function updateAuthUI(authenticated, email = null) {
   isAuthenticated = authenticated;
   currentEmail = email || 'AxelNash4@gmail.com';
   

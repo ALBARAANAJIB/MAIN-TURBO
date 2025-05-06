@@ -31,7 +31,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   
   else if (request.action === 'checkAuth') {
     checkAuthStatus().then(status => {
-      sendResponse({ isAuthenticated: status, email: getUserEmail() });
+      // Get user email and send back with auth status
+      getUserEmail().then(email => {
+        sendResponse({ isAuthenticated: status, email: email });
+      });
     });
     return true;
   }
@@ -51,6 +54,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     return true;
   }
+  
+  else if (request.action === 'updateAuthUI') {
+    // This action will be used to update the popup UI based on auth status
+    checkAuthStatus().then(status => {
+      getUserEmail().then(email => {
+        sendResponse({ isAuthenticated: status, email: email });
+      });
+    });
+    return true;
+  }
 });
 
 // Check authentication status
@@ -66,6 +79,10 @@ async function checkAuthStatus() {
     } else {
       isAuthenticated = false;
       console.log('User is not authenticated or token expired');
+      // Clear expired token
+      if (token) {
+        await logoutUser();
+      }
     }
     
     return isAuthenticated;
@@ -121,7 +138,7 @@ async function authenticateUser() {
     console.log('Authentication successful');
     
     // Notify popup about successful authentication
-    chrome.runtime.sendMessage({ action: 'authStatus', isAuthenticated: true, email: getUserEmail() });
+    chrome.runtime.sendMessage({ action: 'authStatus', isAuthenticated: true, email: await getUserEmail() });
     
     return true;
   } catch (error) {
@@ -227,7 +244,7 @@ function storeToken(token) {
   return chrome.storage.local.set({ [TOKEN_STORAGE_KEY]: token });
 }
 
-function getStoredToken() {
+async function getStoredToken() {
   return new Promise((resolve) => {
     chrome.storage.local.get(TOKEN_STORAGE_KEY, (result) => {
       resolve(result[TOKEN_STORAGE_KEY]);
@@ -239,7 +256,7 @@ function storeTokenExpiry(expiryTime) {
   return chrome.storage.local.set({ [TOKEN_EXPIRY_KEY]: expiryTime });
 }
 
-function getStoredTokenExpiry() {
+async function getStoredTokenExpiry() {
   return new Promise((resolve) => {
     chrome.storage.local.get(TOKEN_EXPIRY_KEY, (result) => {
       resolve(result[TOKEN_EXPIRY_KEY]);
@@ -251,13 +268,10 @@ function storeUserEmail(email) {
   return chrome.storage.local.set({ [USER_EMAIL_KEY]: email });
 }
 
-function getUserEmail() {
-  try {
-    return chrome.storage.local.get(USER_EMAIL_KEY, (result) => {
-      return result[USER_EMAIL_KEY] || 'AxelNash4@gmail.com';
+async function getUserEmail() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(USER_EMAIL_KEY, (result) => {
+      resolve(result[USER_EMAIL_KEY] || 'AxelNash4@gmail.com');
     });
-  } catch (error) {
-    console.error('Error getting stored email:', error);
-    return 'AxelNash4@gmail.com';
-  }
+  });
 }
