@@ -1,9 +1,9 @@
 
 // YouTube API credentials and endpoints
-const CLIENT_ID = '291238784692-9gbi316h4hh28q4lviivmv0sethoa7mc.apps.googleusercontent.com';
+const CLIENT_ID = '304162096302-c470kd77du16s0lrlumobc6s8u6uleng.apps.googleusercontent.com';
 const REDIRECT_URI = chrome.identity.getRedirectURL();
-const SCOPES = ['https://www.googleapis.com/auth/youtube.force-ssl'];
-
+const SCOPES = ['https://www.googleapis.com/auth/youtube.force-ssl',
+                'https://www.googleapis.com/auth/userinfo.email'];
 // Token storage keys
 const TOKEN_STORAGE_KEY = 'youtube_enhancer_token';
 const TOKEN_EXPIRY_KEY = 'youtube_enhancer_token_expiry';

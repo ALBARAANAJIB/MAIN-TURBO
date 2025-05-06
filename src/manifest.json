@@ -5,42 +5,51 @@
   "description": "Enhance your YouTube experience with powerful features",
   "manifest_version": 3,
   "permissions": [
-    "identity",
-    "storage",
     "tabs",
-    "activeTab"
+    "storage",
+    "scripting",
+    "activeTab",
+    "identity"
   ],
   "host_permissions": [
-    "https://*.youtube.com/*",
-    "https://www.googleapis.com/*"
+    "https://www.youtube.com/*",
+    "https://www.googleapis.com/*",
+    "https://accounts.google.com/*"
   ],
-  "action": {
-    "default_popup": "popup.html",
-    "default_icon": {
-      "16": "icon16.png",
-      "48": "icon48.png",
-      "128": "icon128.png"
-    }
+
+ "action": {
+  "default_popup": "popup.html",
+  "default_icon": {
+    "16": "icons/icon.png",
+    "48": "icons/icon.png",
+    "128": "icons/icon.png"
+  }
   },
   "background": {
     "service_worker": "background.js",
     "type": "module"
   },
-  "icons": {
-    "16": "icon16.png",
-    "48": "icon48.png",
-    "128": "icon128.png"
-  },
+ "icons": {
+  "16": "icons/icon.png",
+  "48": "icons/icon.png",
+  "128": "icons/icon.png"
+},
   "oauth2": {
-    "client_id": "291238784692-9gbi316h4hh28q4lviivmv0sethoa7mc.apps.googleusercontent.com",
+    "client_id": "304162096302-c470kd77du16s0lrlumobc6s8u6uleng.apps.googleusercontent.com",
     "scopes": [
       "https://www.googleapis.com/auth/youtube.force-ssl"
     ]
   },
   "content_scripts": [
     {
-      "matches": ["*://*.youtube.com/*"],
+      "matches": ["https://www.youtube.com/*"],
       "js": ["content.js"]
+
+
+
+
+
+      
     }
   ]
 }
