@@ -194,7 +194,7 @@ async function getLikedVideos() {
     
     console.log('Fetching liked videos...');
     
-    const response = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet&myRating=like`, {
+    const response = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet&myRating=like&maxResults=50`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
