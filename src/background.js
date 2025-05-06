@@ -64,6 +64,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     return true;
   }
+  
+  else if (request.action === 'pageChanged' || request.action === 'pageLoaded') {
+    // Handle page navigation events from content script
+    console.log(`Page ${request.action === 'pageChanged' ? 'changed to' : 'loaded'}: ${request.url}`);
+    
+    // We could do something with this information if needed
+    // For now, we're just acknowledging receipt
+    sendResponse({ received: true });
+    return true;
+  }
 });
 
 // Check authentication status
