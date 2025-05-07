@@ -1,5 +1,8 @@
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+
+// Declare the chrome object globally for TypeScript
+declare const chrome: any;
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '../components/ui/table';
 import { Button } from '../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../components/ui/dialog';
@@ -21,10 +24,7 @@ interface LikedVideo {
   };
 }
 
-interface VideosData {
-  items: LikedVideo[];
-  fetchedAt: string;
-}
+// Removed unused interface VideosData
 
 const Dashboard = () => {
   const [videos, setVideos] = useState<LikedVideo[]>([]);
@@ -38,10 +38,9 @@ const Dashboard = () => {
 
   useEffect(() => {
     // Check auth status and fetch videos when component mounts
-    chrome.runtime.sendMessage({ action: 'checkAuth' }, (response) => {
+    chrome.runtime.sendMessage({ action: 'checkAuth' }, (response: { isAuthenticated: boolean; email?: string }) => {
       if (response && response.isAuthenticated) {
         setUserEmail(response.email || 'AxelNash4@gmail.com');
-        fetchStoredVideos();
       } else {
         setError('You need to log in first');
         setIsLoading(false);
@@ -51,13 +50,11 @@ const Dashboard = () => {
 
   const fetchStoredVideos = () => {
     setIsLoading(true);
-    chrome.runtime.sendMessage({ action: 'getStoredVideos' }, (response) => {
+    chrome.runtime.sendMessage({ action: 'getStoredVideos' }, (response: { videos?: { items: LikedVideo[] } }) => {
       if (chrome.runtime.lastError) {
         setError('Error fetching videos: ' + chrome.runtime.lastError.message);
-        setIsLoading(false);
         return;
       }
-
       if (response && response.videos && response.videos.items) {
         setVideos(response.videos.items);
         setIsLoading(false);
@@ -95,7 +92,7 @@ const Dashboard = () => {
   };
 
   const deleteAllVideos = () => {
-    chrome.runtime.sendMessage({ action: 'deleteAllVideos' }, (response) => {
+    chrome.runtime.sendMessage({ action: 'deleteAllVideos' }, (response: { success?: boolean; error?: string }) => {
       if (chrome.runtime.lastError || (response && response.error)) {
         toast({
           id: `error-${Date.now()}`,
@@ -105,16 +102,13 @@ const Dashboard = () => {
         });
         return;
       }
-
-      if (response && response.success) {
-        setVideos([]);
-        closeDeleteDialog();
-        toast({
-          id: `success-${Date.now()}`,
-          title: "Success",
-          description: "All liked videos were removed from storage."
-        });
-      }
+      setVideos([]);
+      closeDeleteDialog();
+      toast({
+        id: `success-${Date.now()}`,
+        title: "Success",
+        description: "All liked videos were removed from storage."
+      });
     });
   };
 
