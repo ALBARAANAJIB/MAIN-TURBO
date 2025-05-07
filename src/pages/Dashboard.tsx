@@ -1,14 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-
-// Declare the chrome object globally for TypeScript
-declare const chrome: any;
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '../components/ui/table';
 import { Button } from '../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../components/ui/dialog';
 import { Checkbox } from '../components/ui/checkbox';
 import { useToast } from '../hooks/use-toast';
-import { Video, Play, Trash2 } from 'lucide-react';
+import { Video, Play, Trash2, RefreshCw } from 'lucide-react';
 
 interface LikedVideo {
   id: string;
@@ -24,8 +21,6 @@ interface LikedVideo {
   };
 }
 
-// Removed unused interface VideosData
-
 const Dashboard = () => {
   const [videos, setVideos] = useState<LikedVideo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -36,33 +31,68 @@ const Dashboard = () => {
   const [deleteCountdown, setDeleteCountdown] = useState(5);
   const { toast } = useToast();
 
+  // Check if we're running in the extension context
+  const isExtensionContext = typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage;
+
   useEffect(() => {
-    // Check auth status and fetch videos when component mounts
-    chrome.runtime.sendMessage({ action: 'checkAuth' }, (response: { isAuthenticated: boolean; email?: string }) => {
-      if (response && response.isAuthenticated) {
-        setUserEmail(response.email || 'AxelNash4@gmail.com');
-      } else {
-        setError('You need to log in first');
-        setIsLoading(false);
-      }
-    });
+    // Only run this if we're in extension context
+    if (isExtensionContext) {
+      checkAuth();
+    } else {
+      // If we're not in extension context, show mock data for development
+      setUserEmail('AxelNash4@gmail.com');
+      setIsLoading(false);
+      console.log('Not running in extension context. Using mock data.');
+    }
   }, []);
+  
+  const checkAuth = () => {
+    try {
+      chrome.runtime.sendMessage({ action: 'checkAuth' }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error('Error checking auth:', chrome.runtime.lastError);
+          setError('Extension communication error. Please try again.');
+          setIsLoading(false);
+          return;
+        }
+        
+        if (response && response.isAuthenticated) {
+          setUserEmail(response.email || 'AxelNash4@gmail.com');
+          fetchStoredVideos();
+        } else {
+          setError('You need to log in first. Please use the extension popup to sign in.');
+          setIsLoading(false);
+        }
+      });
+    } catch (err) {
+      console.error('Chrome API error:', err);
+      setError('Failed to connect to extension. Is this page loaded properly?');
+      setIsLoading(false);
+    }
+  };
 
   const fetchStoredVideos = () => {
-    setIsLoading(true);
-    chrome.runtime.sendMessage({ action: 'getStoredVideos' }, (response: { videos?: { items: LikedVideo[] } }) => {
-      if (chrome.runtime.lastError) {
-        setError('Error fetching videos: ' + chrome.runtime.lastError.message);
-        return;
-      }
-      if (response && response.videos && response.videos.items) {
-        setVideos(response.videos.items);
-        setIsLoading(false);
-      } else {
-        setVideos([]);
-        setIsLoading(false);
-      }
-    });
+    try {
+      chrome.runtime.sendMessage({ action: 'getStoredVideos' }, (response) => {
+        if (chrome.runtime.lastError) {
+          setError('Error fetching videos: ' + chrome.runtime.lastError.message);
+          setIsLoading(false);
+          return;
+        }
+        
+        if (response && response.videos && response.videos.items) {
+          setVideos(response.videos.items);
+          setIsLoading(false);
+        } else {
+          setVideos([]);
+          setIsLoading(false);
+        }
+      });
+    } catch (err) {
+      console.error('Chrome API error:', err);
+      setError('Failed to fetch videos. Extension communication error.');
+      setIsLoading(false);
+    }
   };
 
   const openDeleteDialog = () => {
@@ -92,24 +122,45 @@ const Dashboard = () => {
   };
 
   const deleteAllVideos = () => {
-    chrome.runtime.sendMessage({ action: 'deleteAllVideos' }, (response: { success?: boolean; error?: string }) => {
-      if (chrome.runtime.lastError || (response && response.error)) {
-        toast({
-          id: `error-${Date.now()}`,
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to delete videos. Please try again."
-        });
-        return;
-      }
-      setVideos([]);
-      closeDeleteDialog();
+    if (!isExtensionContext) {
       toast({
-        id: `success-${Date.now()}`,
-        title: "Success",
-        description: "All liked videos were removed from storage."
+        id: `mock-${Date.now()}`,
+        title: "Development Mode",
+        description: "This would delete videos in the extension."
       });
-    });
+      closeDeleteDialog();
+      return;
+    }
+
+    try {
+      chrome.runtime.sendMessage({ action: 'deleteAllVideos' }, (response) => {
+        if (chrome.runtime.lastError || (response && response.error)) {
+          toast({
+            id: `error-${Date.now()}`,
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to delete videos. Please try again."
+          });
+          return;
+        }
+        
+        setVideos([]);
+        closeDeleteDialog();
+        toast({
+          id: `success-${Date.now()}`,
+          title: "Success",
+          description: "All liked videos were removed from storage."
+        });
+      });
+    } catch (err) {
+      console.error('Chrome API error:', err);
+      toast({
+        id: `error-${Date.now()}`,
+        variant: "destructive",
+        title: "Error",
+        description: "Extension communication error. Please try again."
+      });
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -125,6 +176,21 @@ const Dashboard = () => {
     window.open(`https://www.youtube.com/watch?v=${videoId}`, '_blank');
   };
 
+  const handleRefresh = () => {
+    if (!isExtensionContext) {
+      toast({
+        id: `mock-${Date.now()}`,
+        title: "Development Mode",
+        description: "This would refresh videos in the extension."
+      });
+      return;
+    }
+    
+    setIsLoading(true);
+    setError(null);
+    checkAuth();
+  };
+
   return (
     <div className="bg-black text-white min-h-screen p-6">
       <div className="max-w-6xl mx-auto">
@@ -137,15 +203,25 @@ const Dashboard = () => {
               </p>
             )}
           </div>
-          <Button 
-            variant="destructive" 
-            className="text-white"
-            onClick={openDeleteDialog}
-            disabled={videos.length === 0}
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete All
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleRefresh}
+              disabled={isLoading}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Button 
+              variant="destructive" 
+              className="text-white"
+              onClick={openDeleteDialog}
+              disabled={videos.length === 0}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete All
+            </Button>
+          </div>
         </div>
 
         {isLoading ? (
@@ -157,8 +233,14 @@ const Dashboard = () => {
             <p className="text-center text-red-500">{error}</p>
           </div>
         ) : videos.length === 0 ? (
-          <div className="bg-black/30 p-8 rounded-lg">
-            <p className="text-center">No liked videos found. Use the "Fetch Liked Videos" button on YouTube to collect them.</p>
+          <div className="bg-black/30 p-8 rounded-lg text-center">
+            <p className="mb-4">No liked videos found. Use the "Fetch Liked Videos" button on YouTube to collect them.</p>
+            {isExtensionContext && (
+              <Button onClick={handleRefresh}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Check Again
+              </Button>
+            )}
           </div>
         ) : (
           <div className="rounded-lg border border-gray-800 overflow-hidden">

@@ -1,22 +1,26 @@
 
 // Type declarations for Chrome extension API
-interface Chrome {
-  runtime: {
-    sendMessage: (message: any, callback?: (response: any) => void) => void;
-    lastError?: {
+declare namespace chrome {
+  namespace runtime {
+    function sendMessage(message: any, callback?: (response: any) => void): void;
+    const lastError?: {
       message: string;
     };
-  };
-  identity: {
-    getRedirectURL: () => string;
-  };
-  storage: {
-    local: {
-      get: (keys: string | string[] | object | null, callback: (items: object) => void) => void;
-      set: (items: object, callback?: () => void) => Promise<void>;
-      remove: (keys: string | string[], callback?: () => void) => Promise<void>;
-    };
-  };
-}
+  }
 
-declare const chrome: Chrome;
+  namespace identity {
+    function getRedirectURL(): string;
+  }
+
+  namespace storage {
+    namespace local {
+      function get(keys: string | string[] | object | null, callback: (items: object) => void): void;
+      function set(items: object, callback?: () => void): Promise<void>;
+      function remove(keys: string | string[], callback?: () => void): Promise<void>;
+    }
+  }
+
+  namespace tabs {
+    function create(createProperties: { url: string }): void;
+  }
+}
