@@ -8,6 +8,7 @@ const SCOPES = ['https://www.googleapis.com/auth/youtube.force-ssl',
 const TOKEN_STORAGE_KEY = 'youtube_enhancer_token';
 const TOKEN_EXPIRY_KEY = 'youtube_enhancer_token_expiry';
 const USER_EMAIL_KEY = 'youtube_enhancer_email';
+const LIKED_VIDEOS_KEY = 'youtube_enhancer_liked_videos';
 
 // Authentication status
 let isAuthenticated = false;
@@ -48,7 +49,26 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   
   else if (request.action === 'getLikedVideos') {
     getLikedVideos().then(videos => {
+      // Store videos in local storage for dashboard access
+      storeVideos(videos).then(() => {
+        sendResponse({ videos });
+      });
+    }).catch(error => {
+      sendResponse({ error: error.message });
+    });
+    return true;
+  }
+  
+  else if (request.action === 'getStoredVideos') {
+    getStoredVideos().then(videos => {
       sendResponse({ videos });
+    });
+    return true;
+  }
+  
+  else if (request.action === 'deleteAllVideos') {
+    deleteAllVideos().then(() => {
+      sendResponse({ success: true });
     }).catch(error => {
       sendResponse({ error: error.message });
     });
@@ -161,8 +181,8 @@ async function authenticateUser() {
 // Logout user
 async function logoutUser() {
   try {
-    // Clear stored credentials
-    await chrome.storage.local.remove([TOKEN_STORAGE_KEY, TOKEN_EXPIRY_KEY, USER_EMAIL_KEY]);
+    // Clear stored credentials and videos
+    await chrome.storage.local.remove([TOKEN_STORAGE_KEY, TOKEN_EXPIRY_KEY, USER_EMAIL_KEY, LIKED_VIDEOS_KEY]);
     
     isAuthenticated = false;
     console.log('User logged out successfully');
@@ -194,7 +214,7 @@ async function getLikedVideos() {
     
     console.log('Fetching liked videos...');
     
-    const response = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet&myRating=like&maxResults=50`, {
+    const response = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&myRating=like&maxResults=50`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -217,6 +237,45 @@ async function getLikedVideos() {
       chrome.runtime.sendMessage({ action: 'authStatus', isAuthenticated: false, reason: 'token_expired' });
     }
     
+    throw error;
+  }
+}
+
+// Store videos in local storage
+async function storeVideos(videos) {
+  try {
+    // Add fetch timestamp to the videos data
+    const videosData = {
+      items: videos,
+      fetchedAt: new Date().toISOString()
+    };
+    
+    await chrome.storage.local.set({ [LIKED_VIDEOS_KEY]: videosData });
+    console.log('Videos stored in local storage');
+    return true;
+  } catch (error) {
+    console.error('Error storing videos:', error);
+    return false;
+  }
+}
+
+// Get stored videos from local storage
+async function getStoredVideos() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(LIKED_VIDEOS_KEY, (result) => {
+      resolve(result[LIKED_VIDEOS_KEY] || { items: [] });
+    });
+  });
+}
+
+// Delete all liked videos (clear from storage)
+async function deleteAllVideos() {
+  try {
+    await chrome.storage.local.remove(LIKED_VIDEOS_KEY);
+    console.log('All videos deleted from storage');
+    return true;
+  } catch (error) {
+    console.error('Error deleting videos:', error);
     throw error;
   }
 }

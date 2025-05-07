@@ -7,6 +7,7 @@ const logoutBtn = document.getElementById('logout-btn');
 const likedVideosBtn = document.getElementById('liked-videos-btn');
 const exportDataBtn = document.getElementById('export-data-btn');
 const aiSummaryBtn = document.getElementById('ai-summary-btn');
+const dashboardBtn = document.getElementById('dashboard-btn');
 const userAvatar = document.getElementById('user-avatar');
 const userEmail = document.getElementById('user-email');
 const toast = document.getElementById('toast');
@@ -29,6 +30,7 @@ function setupEventListeners() {
   likedVideosBtn.addEventListener('click', handleLikedVideos);
   exportDataBtn.addEventListener('click', handleExportData);
   aiSummaryBtn.addEventListener('click', handleAISummary);
+  dashboardBtn.addEventListener('click', handleOpenDashboard);
   
   // Listen for messages from background script
   chrome.runtime.onMessage.addListener((message) => {
@@ -151,11 +153,7 @@ function handleLikedVideos() {
     if (response.videos) {
       const count = response.videos.length;
       console.log(`Found ${count} liked videos:`, response.videos);
-      showToast(`Successfully fetched ${count} liked videos!`, 'success');
-      
-      // TODO: Add logic to unlike videos
-      // For now, just log them to console
-      console.log('Liked videos:', response.videos);
+      showToast(`Successfully fetched ${count} liked videos! View them in the dashboard.`, 'success');
     } else {
       showToast('No liked videos found.', 'success');
     }
@@ -172,6 +170,11 @@ function handleExportData() {
 function handleAISummary() {
   console.log('AI summary button clicked');
   showToast('AI summary feature coming soon!', 'success');
+}
+
+// Handle opening the dashboard
+function handleOpenDashboard() {
+  chrome.tabs.create({ url: chrome.runtime.getURL("index.html") });
 }
 
 // Update UI based on authentication status
