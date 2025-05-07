@@ -98,6 +98,7 @@ const Dashboard = () => {
     chrome.runtime.sendMessage({ action: 'deleteAllVideos' }, (response) => {
       if (chrome.runtime.lastError || (response && response.error)) {
         toast({
+          id: `error-${Date.now()}`,
           variant: "destructive",
           title: "Error",
           description: "Failed to delete videos. Please try again."
@@ -109,6 +110,7 @@ const Dashboard = () => {
         setVideos([]);
         closeDeleteDialog();
         toast({
+          id: `success-${Date.now()}`,
           title: "Success",
           description: "All liked videos were removed from storage."
         });
