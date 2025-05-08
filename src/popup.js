@@ -1,4 +1,3 @@
-
 // DOM elements
 const loginView = document.getElementById('login-view');
 const userView = document.getElementById('user-view');
@@ -212,7 +211,7 @@ function handleAISummary() {
 
 // Handle opening the dashboard
 function handleOpenDashboard() {
-  chrome.tabs.create({ url: chrome.runtime.getURL("index.html") });
+  chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
 }
 
 // Update UI based on authentication status

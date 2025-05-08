@@ -48,7 +48,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["index.html", "assets/*"],
+      "resources": ["dashboard.html", "dashboard.css", "dashboard.js", "assets/*"],
       "matches": ["<all_urls>"]
     }
   ]

@@ -105,7 +105,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
   
   else if (request.action === 'openDashboard') {
-    // Use the dashboard.html in public folder instead of index.html
+    // Use dashboard.html instead of index.html
     chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
     sendResponse({ success: true });
     return true;
