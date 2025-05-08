@@ -1,4 +1,3 @@
-
 // YouTube API credentials and endpoints
 const CLIENT_ID = '304162096302-c470kd77du16s0lrlumobc6s8u6uleng.apps.googleusercontent.com';
 const REDIRECT_URI = chrome.identity.getRedirectURL();
@@ -106,7 +105,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
   
   else if (request.action === 'openDashboard') {
-    chrome.tabs.create({ url: chrome.runtime.getURL("index.html") });
+    // Use the dashboard.html in public folder instead of index.html
+    chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
     sendResponse({ success: true });
     return true;
   }
