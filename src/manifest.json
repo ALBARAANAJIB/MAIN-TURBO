@@ -16,25 +16,23 @@
     "https://www.googleapis.com/*",
     "https://accounts.google.com/*"
   ],
-
- "action": {
-  "default_popup": "popup.html",
-  "default_icon": {
-    "16": "icons/icon.png",
-    "48": "icons/icon.png",
-    "128": "icons/icon.png"
-    
-  }
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon.png",
+      "48": "icons/icon.png",
+      "128": "icons/icon.png"
+    }
   },
   "background": {
     "service_worker": "background.js",
     "type": "module"
   },
- "icons": {
-  "16": "icons/icon.png",
-  "48": "icons/icon.png",
-  "128": "icons/icon.png"
-},
+  "icons": {
+    "16": "icons/icon.png",
+    "48": "icons/icon.png",
+    "128": "icons/icon.png"
+  },
   "oauth2": {
     "client_id": "304162096302-c470kd77du16s0lrlumobc6s8u6uleng.apps.googleusercontent.com",
     "scopes": [
@@ -44,12 +42,13 @@
   "content_scripts": [
     {
       "matches": ["https://www.youtube.com/*"],
-      "js": ["content.js"]
+      "js": ["content.js"],
+      "css": ["content.css"]
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["index.html"],
+      "resources": ["index.html", "assets/*"],
       "matches": ["<all_urls>"]
     }
   ]

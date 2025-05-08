@@ -1,349 +1,170 @@
 
-import React, { useState, useEffect } from 'react';
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '../components/ui/table';
+import React, { useState } from 'react';
+import { useVideos } from '../hooks/use-videos';
+import { toast } from '../hooks/use-toast';
+import { checkAuth } from '../utils/extension';
+import { VideoGrid } from '../components/dashboard/VideoGrid';
+import { VideoTable } from '../components/dashboard/VideoTable';
+import { DashboardHeader } from '../components/dashboard/DashboardHeader';
+import { EmptyState } from '../components/dashboard/EmptyState';
+import { LoadingState } from '../components/dashboard/LoadingState';
 import { Button } from '../components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../components/ui/dialog';
-import { Checkbox } from '../components/ui/checkbox';
-import { useToast } from '../hooks/use-toast';
-import { Video, Play, Trash2, RefreshCw } from 'lucide-react';
-
-interface LikedVideo {
-  id: string;
-  snippet: {
-    title: string;
-    channelTitle: string;
-    publishedAt: string;
-    thumbnails: {
-      default: {
-        url: string;
-      };
-    };
-  };
-}
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '../components/ui/pagination';
 
 const Dashboard = () => {
-  const [videos, setVideos] = useState<LikedVideo[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [userEmail, setUserEmail] = useState<string>('');
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [deleteConfirmed, setDeleteConfirmed] = useState(false);
-  const [deleteCountdown, setDeleteCountdown] = useState(5);
-  const { toast } = useToast();
-
-  // Check if we're running in the extension context
-  const isExtensionContext = typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage;
-
-  useEffect(() => {
-    // Only run this if we're in extension context
-    if (isExtensionContext) {
-      checkAuth();
-    } else {
-      // If we're not in extension context, show mock data for development
-      setUserEmail('AxelNash4@gmail.com');
-      setIsLoading(false);
-      console.log('Not running in extension context. Using mock data.');
-    }
-  }, []);
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [userEmail, setUserEmail] = useState<string>('AxelNash4@gmail.com');
   
-  const checkAuth = () => {
-    try {
-      chrome.runtime.sendMessage({ action: 'checkAuth' }, (response) => {
-        if (chrome.runtime.lastError) {
-          console.error('Error checking auth:', chrome.runtime.lastError);
-          setError('Extension communication error. Please try again.');
-          setIsLoading(false);
-          return;
-        }
-        
-        if (response && response.isAuthenticated) {
-          setUserEmail(response.email || 'AxelNash4@gmail.com');
-          fetchStoredVideos();
-        } else {
-          setError('You need to log in first. Please use the extension popup to sign in.');
-          setIsLoading(false);
-        }
-      });
-    } catch (err) {
-      console.error('Chrome API error:', err);
-      setError('Failed to connect to extension. Is this page loaded properly?');
-      setIsLoading(false);
-    }
-  };
-
-  const fetchStoredVideos = () => {
-    try {
-      chrome.runtime.sendMessage({ action: 'getStoredVideos' }, (response) => {
-        if (chrome.runtime.lastError) {
-          setError('Error fetching videos: ' + chrome.runtime.lastError.message);
-          setIsLoading(false);
-          return;
-        }
-        
-        if (response && response.videos && response.videos.items) {
-          setVideos(response.videos.items);
-          setIsLoading(false);
-        } else {
-          setVideos([]);
-          setIsLoading(false);
-        }
-      });
-    } catch (err) {
-      console.error('Chrome API error:', err);
-      setError('Failed to fetch videos. Extension communication error.');
-      setIsLoading(false);
-    }
-  };
-
-  const openDeleteDialog = () => {
-    setShowDeleteDialog(true);
-    setDeleteConfirmed(false);
-    setDeleteCountdown(5);
-  };
-
-  const closeDeleteDialog = () => {
-    setShowDeleteDialog(false);
-    setDeleteConfirmed(false);
-  };
-
-  const confirmDelete = () => {
-    setDeleteConfirmed(true);
+  // Check authentication on mount
+  React.useEffect(() => {
+    const verifyAuth = async () => {
+      const auth = await checkAuth();
+      if (auth.isAuthenticated) {
+        setUserEmail(auth.email || 'AxelNash4@gmail.com');
+      }
+    };
     
-    // Start countdown
-    const interval = setInterval(() => {
-      setDeleteCountdown((prevCount) => {
-        if (prevCount <= 1) {
-          clearInterval(interval);
-          return 0;
-        }
-        return prevCount - 1;
-      });
-    }, 1000);
-  };
+    verifyAuth();
+  }, []);
 
-  const deleteAllVideos = () => {
-    if (!isExtensionContext) {
-      toast({
-        id: `mock-${Date.now()}`,
-        title: "Development Mode",
-        description: "This would delete videos in the extension."
-      });
-      closeDeleteDialog();
-      return;
-    }
+  // Use our custom hook to manage videos
+  const {
+    videos,
+    isLoading,
+    isLoadingMore,
+    error,
+    hasMore,
+    totalVideos,
+    fetchedCount,
+    loadMore,
+    refresh,
+    toggleSelectVideo,
+    selectAll,
+    deselectAll,
+    deleteSelected,
+    deleteAll,
+    selectedCount,
+    filter,
+    setFilter,
+    filteredVideos,
+    sortBy,
+    setSortBy,
+    sortDirection,
+    setSortDirection
+  } = useVideos();
 
-    try {
-      chrome.runtime.sendMessage({ action: 'deleteAllVideos' }, (response) => {
-        if (chrome.runtime.lastError || (response && response.error)) {
-          toast({
-            id: `error-${Date.now()}`,
-            variant: "destructive",
-            title: "Error",
-            description: "Failed to delete videos. Please try again."
-          });
-          return;
-        }
-        
-        setVideos([]);
-        closeDeleteDialog();
-        toast({
-          id: `success-${Date.now()}`,
-          title: "Success",
-          description: "All liked videos were removed from storage."
-        });
-      });
-    } catch (err) {
-      console.error('Chrome API error:', err);
-      toast({
-        id: `error-${Date.now()}`,
-        variant: "destructive",
-        title: "Error",
-        description: "Extension communication error. Please try again."
-      });
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    });
-  };
-
-  const openVideoInNewTab = (videoId: string) => {
+  // Open video in new tab
+  const handlePlayVideo = (videoId: string) => {
     window.open(`https://www.youtube.com/watch?v=${videoId}`, '_blank');
   };
 
-  const handleRefresh = () => {
-    if (!isExtensionContext) {
-      toast({
-        id: `mock-${Date.now()}`,
-        title: "Development Mode",
-        description: "This would refresh videos in the extension."
-      });
-      return;
-    }
-    
-    setIsLoading(true);
-    setError(null);
-    checkAuth();
-  };
+  // Check if all filtered videos are selected
+  const allSelected = filteredVideos.length > 0 && filteredVideos.every(video => video.selected);
+  const someSelected = filteredVideos.some(video => video.selected);
 
   return (
-    <div className="bg-black text-white min-h-screen p-6">
-      <div className="max-w-6xl mx-auto">
+    <div className="bg-black text-white min-h-screen p-4 md:p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* User info */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-4xl font-bold mb-2">Liked Videos</h1>
+            <h1 className="text-3xl font-bold mb-2">YouTube Enhancer</h1>
             {userEmail && (
               <p className="text-gray-400">
                 Logged in as: {userEmail}
               </p>
             )}
           </div>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              onClick={handleRefresh}
-              disabled={isLoading}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-            <Button 
-              variant="destructive" 
-              className="text-white"
-              onClick={openDeleteDialog}
-              disabled={videos.length === 0}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete All
-            </Button>
-          </div>
         </div>
 
+        {/* Main content */}
         {isLoading ? (
-          <div className="flex justify-center items-center h-64">
-            <p>Loading videos...</p>
-          </div>
+          <LoadingState />
         ) : error ? (
           <div className="bg-black/30 p-6 rounded-lg">
             <p className="text-center text-red-500">{error}</p>
+            <div className="flex justify-center mt-4">
+              <Button onClick={refresh}>Try Again</Button>
+            </div>
           </div>
         ) : videos.length === 0 ? (
-          <div className="bg-black/30 p-8 rounded-lg text-center">
-            <p className="mb-4">No liked videos found. Use the "Fetch Liked Videos" button on YouTube to collect them.</p>
-            {isExtensionContext && (
-              <Button onClick={handleRefresh}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Check Again
-              </Button>
-            )}
-          </div>
+          <EmptyState onRefresh={refresh} />
         ) : (
-          <div className="rounded-lg border border-gray-800 overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-gray-800">
-                  <TableHead className="w-12"></TableHead>
-                  <TableHead className="w-16"></TableHead>
-                  <TableHead>Video Details</TableHead>
-                  <TableHead className="text-right">Date Liked</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {videos.map((video) => (
-                  <TableRow 
-                    key={video.id} 
-                    className="border-gray-800 hover:bg-gray-900/50"
-                    onClick={() => openVideoInNewTab(video.id)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <TableCell className="w-12">
-                      <Checkbox onClick={(e) => e.stopPropagation()} />
-                    </TableCell>
-                    <TableCell className="w-16">
-                      <div className="relative w-12 h-12 bg-gray-800 rounded overflow-hidden">
-                        {video.snippet.thumbnails?.default ? (
-                          <img 
-                            src={video.snippet.thumbnails.default.url} 
-                            alt={video.snippet.title}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <Video className="absolute inset-0 m-auto text-gray-600" />
-                        )}
-                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100">
-                          <Play className="w-6 h-6 text-white" />
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium text-white">{video.snippet.title}</p>
-                        <p className="text-gray-400 text-sm">{video.snippet.channelTitle}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right text-gray-400">
-                      {formatDate(video.snippet.publishedAt)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </div>
+          <div className="space-y-6">
+            {/* Dashboard header with controls */}
+            <DashboardHeader
+              totalVideos={totalVideos}
+              fetchedCount={fetchedCount}
+              selectedCount={selectedCount}
+              isLoading={isLoading}
+              onRefresh={refresh}
+              onDeleteSelected={deleteSelected}
+              onDeleteAll={deleteAll}
+              onSelectAll={selectAll}
+              onDeselectAll={deselectAll}
+              viewMode={viewMode}
+              setViewMode={setViewMode}
+              filter={filter}
+              setFilter={setFilter}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
+              sortDirection={sortDirection}
+              setSortDirection={setSortDirection}
+              hasSelectedItems={selectedCount > 0}
+            />
 
-      {/* Delete confirmation dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={closeDeleteDialog}>
-        <DialogContent className="bg-gray-900 border-gray-800 text-white">
-          <DialogHeader>
-            <DialogTitle className="text-red-500">Delete All Liked Videos</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              You're about to delete {videos.length} liked videos from your storage.
-              <br />This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            {!deleteConfirmed ? (
-              <p className="text-white">
-                Are you sure you want to proceed? This will only remove the videos from this extension's storage, not from your YouTube account.
-              </p>
-            ) : (
-              <div>
-                <p className="text-white mb-2">Please wait {deleteCountdown} seconds before deletion...</p>
-                <div className="w-full bg-gray-700 rounded-full h-2.5">
-                  <div 
-                    className="bg-red-600 h-2.5 rounded-full transition-all duration-1000" 
-                    style={{ width: `${(deleteCountdown / 5) * 100}%` }}
-                  ></div>
-                </div>
+            {/* No results message */}
+            {filteredVideos.length === 0 && (
+              <EmptyState 
+                message="No videos match your search" 
+                onRefresh={() => setFilter('')}
+              />
+            )}
+
+            {/* Videos display (grid or table) */}
+            {filteredVideos.length > 0 && (
+              viewMode === 'grid' ? (
+                <VideoGrid
+                  videos={filteredVideos}
+                  onSelect={toggleSelectVideo}
+                  onPlay={handlePlayVideo}
+                />
+              ) : (
+                <VideoTable
+                  videos={filteredVideos}
+                  onSelect={toggleSelectVideo}
+                  onSelectAll={selectAll}
+                  onDeselectAll={deselectAll}
+                  onPlay={handlePlayVideo}
+                  allSelected={allSelected}
+                  someSelected={someSelected}
+                />
+              )
+            )}
+
+            {/* Load more / pagination */}
+            {hasMore && filteredVideos.length > 0 && (
+              <div className="flex justify-center mt-8">
+                <Button 
+                  onClick={loadMore} 
+                  disabled={isLoadingMore}
+                  variant="outline"
+                  className="min-w-[200px]"
+                >
+                  {isLoadingMore ? (
+                    <>
+                      <span className="animate-spin mr-2">⟳</span>
+                      Loading...
+                    </>
+                  ) : (
+                    <>Load More Videos</>
+                  )}
+                </Button>
               </div>
             )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={closeDeleteDialog}>
-              Cancel
-            </Button>
-            {!deleteConfirmed ? (
-              <Button variant="destructive" onClick={confirmDelete}>
-                Yes, Delete All
-              </Button>
-            ) : (
-              <Button 
-                variant="destructive" 
-                onClick={deleteAllVideos} 
-                disabled={deleteCountdown > 0}
-              >
-                {deleteCountdown > 0 ? `Wait ${deleteCountdown}s` : "Delete Now"}
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        )}
+      </div>
     </div>
   );
 };

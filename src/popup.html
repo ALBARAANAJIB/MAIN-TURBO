@@ -13,8 +13,10 @@
       --light: #ffffff;
       --gray: #f5f5f5;
       --gray-dark: #909090;
-      --border-radius: 4px;
+      --border-radius: 8px;
       --shadow: 0 2px 10px rgba(0,0,0,0.1);
+      --purple: #673AB7;
+      --red: #ff0000;
     }
     
     * {
@@ -26,7 +28,7 @@
     
     body {
       width: 360px;
-      min-height: 400px;
+      min-height: 440px;
       background-color: var(--light);
       color: var(--dark);
       overflow-x: hidden;
@@ -38,23 +40,23 @@
       align-items: center;
       justify-content: space-between;
       margin-bottom: 1.5rem;
-      border-bottom: 1px solid var(--gray);
       padding-bottom: 1rem;
+      border-bottom: 1px solid var(--gray);
     }
     
     .logo {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 12px;
     }
     
     .logo img {
-      width: 32px;
-      height: 32px;
+      width: 40px;
+      height: 40px;
     }
     
     .logo h1 {
-      font-size: 16px;
+      font-size: 18px;
       font-weight: 700;
     }
     
@@ -80,74 +82,139 @@
       align-items: center;
       gap: 10px;
       padding: 0.5rem;
-      border-radius: var(--border-radius);
       background-color: var(--gray);
+      border-radius: var(--border-radius);
+      margin-bottom: 1rem;
     }
     
     .user-avatar {
-      width: 32px;
-      height: 32px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
-      background-color: #ddd;
+      background-color: #B71C1C;
+      color: white;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: bold;
+      font-size: 18px;
     }
     
     .user-email {
       font-size: 14px;
-    }
-    
-    .features {
-      margin-top: 1.5rem;
-    }
-    
-    .feature-title {
-      font-size: 16px;
       font-weight: 500;
-      margin-bottom: 0.75rem;
-      border-bottom: 1px solid var(--gray);
-      padding-bottom: 0.5rem;
     }
     
-    .feature-list {
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    
+    .feature-card {
+      background-color: white;
+      border-radius: var(--border-radius);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      padding: 1rem;
       display: flex;
       flex-direction: column;
-      gap: 0.75rem;
+      align-items: center;
+      text-align: center;
+      border: 1px solid var(--gray);
+      cursor: pointer;
+      transition: all 0.2s;
+      height: 150px;
     }
     
-    .feature-btn {
-      display: block;
-      width: 100%;
-      padding: 0.75rem;
-      background-color: var(--light);
-      border: 1px solid var(--gray-dark);
-      border-radius: var(--border-radius);
-      color: var(--dark);
-      font-size: 14px;
-      font-weight: 500;
-      text-align: left;
-      cursor: pointer;
+    .feature-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .feature-card .icon {
+      width: 32px;
+      height: 32px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      transition: all 0.2s ease;
+      justify-content: center;
+      margin-bottom: 0.75rem;
+      border-radius: 50%;
+      padding: 6px;
     }
     
-    .feature-btn:hover {
-      background-color: var(--gray);
-      border-color: var(--dark);
+    .fetch-videos .icon {
+      background-color: rgba(255, 0, 0, 0.1);
+      color: var(--red);
     }
     
-    .feature-btn.primary {
-      background-color: var(--primary);
-      color: white;
+    .dashboard .icon {
+      background-color: rgba(103, 58, 183, 0.1);
+      color: var(--purple);
+    }
+    
+    .export-data .icon {
+      background-color: rgba(0, 150, 136, 0.1);
+      color: #009688;
+    }
+    
+    .ai-summary .icon {
+      background-color: rgba(33, 150, 243, 0.1);
+      color: #2196F3;
+    }
+    
+    .feature-card h3 {
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+    }
+    
+    .feature-card p {
+      font-size: 12px;
+      color: var(--gray-dark);
+      line-height: 1.4;
+      margin-bottom: 0.75rem;
+    }
+    
+    .btn {
+      background: none;
       border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: auto;
+      width: 100%;
+      display: block;
     }
     
-    .feature-btn.primary:hover {
-      opacity: 0.9;
+    .btn-red {
+      background-color: var(--red);
+      color: white;
+    }
+    
+    .btn-red:hover {
+      background-color: #d32f2f;
+    }
+    
+    .btn-purple {
+      background-color: var(--purple);
+      color: white;
+    }
+    
+    .btn-purple:hover {
+      background-color: #5e35b1;
+    }
+    
+    .btn-outline {
+      background-color: transparent;
+      border: 1px solid currentColor;
+    }
+    
+    .btn-outline:hover {
+      background-color: rgba(0, 0, 0, 0.05);
     }
     
     .login-btn {
@@ -169,13 +236,18 @@
       background-color: transparent;
       color: var(--gray-dark);
       border: none;
-      margin-top: 1rem;
+      padding: 0.5rem;
+      margin: 0 auto;
+      display: block;
+      margin-top: 1.5rem;
       font-size: 14px;
       cursor: pointer;
+      border-radius: 4px;
     }
     
     .logout-btn:hover {
       color: var(--dark);
+      background-color: var(--gray);
     }
     
     .status-message {
@@ -216,6 +288,7 @@
       opacity: 0;
       transform: translateY(10px);
       transition: all 0.3s ease;
+      z-index: 100;
     }
     
     .toast.show {
@@ -231,32 +304,23 @@
       background-color: #f44336;
     }
 
-    .dashboard-btn {
-      background-color: #673AB7;
-      color: white;
-      padding: 0.75rem;
-      border-radius: var(--border-radius);
-      font-size: 14px;
-      font-weight: 500;
-      text-align: center;
-      border: none;
-      cursor: pointer;
-      margin-top: 1rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s ease;
-    }
-    
-    .dashboard-btn:hover {
-      opacity: 0.9;
+    /* SVG icons */
+    .svg-icon {
+      width: 20px;
+      height: 20px;
+      display: inline-block;
+      stroke-width: 2px;
+      stroke: currentColor;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
   </style>
 </head>
 <body>
   <div class="header">
     <div class="logo">
-      <img src="icon.png" alt="YouTube Enhancer">
+      <img src="icons/icon.png" alt="YouTube Enhancer">
       <h1>YouTube Enhancer</h1>
     </div>
   </div>
@@ -275,24 +339,62 @@
         <span class="user-email" id="user-email">AxelNash4@gmail.com</span>
       </div>
       
-      <div class="features">
-        <h2 class="feature-title">Youtube Features</h2>
-        <div class="feature-list">
-          <button id="liked-videos-btn" class="feature-btn">
-            Fetch 50 liked videos
-            <span>&rarr;</span>
-          </button>
-          <button id="dashboard-btn" class="dashboard-btn">
-            Open Dashboard
-          </button>
-          <button id="export-data-btn" class="feature-btn">
-            Export data
-            <span>&rarr;</span>
-          </button>
-          <button id="ai-summary-btn" class="feature-btn">
-            AI Video Summary
-            <span>&rarr;</span>
-          </button>
+      <div class="feature-grid">
+        <!-- Fetch Videos -->
+        <div class="feature-card fetch-videos">
+          <div class="icon">
+            <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+          </div>
+          <h3>Fetch Videos</h3>
+          <p>Get your latest liked videos from YouTube</p>
+          <button id="liked-videos-btn" class="btn btn-red">Fetch Now</button>
+        </div>
+        
+        <!-- Dashboard -->
+        <div class="feature-card dashboard">
+          <div class="icon">
+            <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+          </div>
+          <h3>Dashboard</h3>
+          <p>View and manage your liked videos</p>
+          <button id="dashboard-btn" class="btn btn-purple">Open</button>
+        </div>
+        
+        <!-- Export Data -->
+        <div class="feature-card export-data">
+          <div class="icon">
+            <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+          </div>
+          <h3>Export Data</h3>
+          <p>Download your liked videos as JSON</p>
+          <button id="export-data-btn" class="btn btn-outline">Export</button>
+        </div>
+        
+        <!-- AI Summary -->
+        <div class="feature-card ai-summary">
+          <div class="icon">
+            <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+          </div>
+          <h3>AI Summary</h3>
+          <p>Generate summaries of your video collection</p>
+          <button id="ai-summary-btn" class="btn btn-outline">Generate</button>
         </div>
       </div>
       

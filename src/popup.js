@@ -124,13 +124,13 @@ function handleLikedVideos() {
   
   // Add loading state
   likedVideosBtn.disabled = true;
-  const originalText = likedVideosBtn.innerHTML;
-  likedVideosBtn.innerHTML = 'Fetching liked videos... <span class="loading"></span>';
+  const originalText = likedVideosBtn.textContent;
+  likedVideosBtn.innerHTML = 'Fetching... <span class="loading"></span>';
   
   chrome.runtime.sendMessage({ action: 'getLikedVideos' }, (response) => {
     // Restore button
     likedVideosBtn.disabled = false;
-    likedVideosBtn.innerHTML = originalText;
+    likedVideosBtn.textContent = originalText;
     
     if (chrome.runtime.lastError) {
       console.error('Error fetching liked videos:', chrome.runtime.lastError);
@@ -163,7 +163,45 @@ function handleLikedVideos() {
 // Handle export data button click
 function handleExportData() {
   console.log('Export data button clicked');
-  showToast('Export data feature coming soon!', 'success');
+  
+  chrome.runtime.sendMessage({ action: 'getStoredVideos' }, (response) => {
+    if (chrome.runtime.lastError) {
+      console.error('Error getting stored videos:', chrome.runtime.lastError);
+      showToast('Failed to export data. Please try again.', 'error');
+      return;
+    }
+    
+    if (response && response.videos && response.videos.items && response.videos.items.length > 0) {
+      // Create export data
+      const exportData = {
+        videos: response.videos.items,
+        exportDate: new Date().toISOString(),
+        totalCount: response.videos.items.length
+      };
+      
+      // Convert to JSON
+      const jsonData = JSON.stringify(exportData, null, 2);
+      
+      // Create download link
+      const blob = new Blob([jsonData], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'youtube_liked_videos.json';
+      document.body.appendChild(a);
+      a.click();
+      
+      // Clean up
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+      
+      showToast(`Exported ${exportData.totalCount} videos successfully.`, 'success');
+    } else {
+      showToast('No videos to export. Fetch your liked videos first.', 'error');
+    }
+  });
 }
 
 // Handle AI summary button click

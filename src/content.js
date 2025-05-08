@@ -44,7 +44,7 @@ function setupNavigationObserver() {
       
       // Check if we need to inject the fetch button
       if (isLikedVideosPage()) {
-        setTimeout(injectFetchButton, 1000); // Give YouTube some time to render
+        setTimeout(injectFetchButton, 800); // Give YouTube some time to render
       }
     }
   });
@@ -60,18 +60,27 @@ function injectFetchButton() {
     return;
   }
   
-  // Try to find the container for the button
+  // Look for the line where we want to inject (between header and playlist items)
   const targetContainer = findButtonContainer();
   if (!targetContainer) {
     console.warn('Could not find target container for fetch button');
+    // Try again after a short delay
+    setTimeout(injectFetchButton, 1000);
     return;
   }
   
-  // Create the button
+  // Create the button with icon
   const fetchButton = document.createElement('button');
   fetchButton.id = 'yt-enhancer-fetch-btn';
-  fetchButton.textContent = 'Fetch My Liked Videos';
   fetchButton.className = 'yt-enhancer-btn';
+  fetchButton.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="yt-enhancer-icon">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+      <polyline points="17 8 12 3 7 8"></polyline>
+      <line x1="12" y1="3" x2="12" y2="15"></line>
+    </svg>
+    Fetch Liked Videos
+  `;
   fetchButton.addEventListener('click', handleFetchButtonClick);
   
   // Create a wrapper div to match YouTube's layout
@@ -88,11 +97,21 @@ function injectFetchButton() {
 
 // Find the appropriate container for the fetch button
 function findButtonContainer() {
-  // This is a simplistic approach; you might need to adjust based on YouTube's structure
-  // Try to find the container that has the Shuffle/Play All buttons
-  const possibleContainers = document.querySelectorAll('ytd-playlist-header-renderer div#container');
-  if (possibleContainers.length > 0) {
-    return possibleContainers[0];
+  // The red line in the image is right below the playlist header and right above the videos list
+  // Look for the container that has the Shuffle/Play All buttons
+  const header = document.querySelector('ytd-playlist-header-renderer');
+  if (header) {
+    // Try to find the line where we want to inject (between header and playlist items)
+    const actionsRow = header.querySelector('#top-row');
+    if (actionsRow) {
+      return actionsRow;
+    }
+    
+    // Alternative: find the stats section which is right above the videos
+    const statsSection = header.querySelector('#stats');
+    if (statsSection) {
+      return statsSection.parentElement;
+    }
   }
   
   // Fallback: try to find another suitable container
@@ -105,14 +124,26 @@ function handleFetchButtonClick() {
   if (!button) return;
   
   // Update button to loading state
-  const originalText = button.textContent;
-  button.textContent = 'Fetching...';
+  const originalHTML = button.innerHTML;
+  button.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="yt-enhancer-icon animate-spin">
+      <line x1="12" y1="2" x2="12" y2="6"></line>
+      <line x1="12" y1="18" x2="12" y2="22"></line>
+      <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
+      <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
+      <line x1="2" y1="12" x2="6" y2="12"></line>
+      <line x1="18" y1="12" x2="22" y2="12"></line>
+      <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line>
+      <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
+    </svg>
+    Fetching...
+  `;
   button.disabled = true;
   
   // Request the background script to fetch liked videos
   chrome.runtime.sendMessage({ action: 'getLikedVideos' }, (response) => {
     // Restore the button
-    button.textContent = originalText;
+    button.innerHTML = originalHTML;
     button.disabled = false;
     
     if (chrome.runtime.lastError) {
@@ -121,14 +152,14 @@ function handleFetchButtonClick() {
       return;
     }
     
-    if (response.error) {
+    if (response && response.error) {
       showNotification(response.error, 'error');
       return;
     }
     
-    if (response.videos) {
+    if (response && response.videos) {
       const count = response.videos.length;
-      showNotification(`✅ ${count} videos fetched. View them in your dashboard.`, 'success', true);
+      showNotification(`✅ ${count} videos fetched. View and manage them in your dashboard.`, 'success', true);
     } else {
       showNotification('No videos found.', 'info');
     }
@@ -193,109 +224,9 @@ function showNotification(message, type = 'info', showDashboardLink = false) {
 
 // Inject custom styles
 function injectStyles() {
-  // Check if styles are already injected
-  if (document.getElementById('yt-enhancer-styles')) {
-    return;
-  }
-  
-  const styleElement = document.createElement('style');
-  styleElement.id = 'yt-enhancer-styles';
-  styleElement.textContent = `
-    .yt-enhancer-btn-wrapper {
-      margin-top: 10px;
-    }
-    
-    .yt-enhancer-btn {
-      background: rgba(255, 0, 0, 0.1);
-      color: #ff0000;
-      border: 1px solid rgba(255, 0, 0, 0.2);
-      border-radius: 2px;
-      padding: 8px 16px;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    
-    .yt-enhancer-btn:hover {
-      background: rgba(255, 0, 0, 0.2);
-    }
-    
-    .yt-enhancer-btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-    
-    .yt-enhancer-notification {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      padding: 12px 16px;
-      background: rgba(33, 33, 33, 0.9);
-      color: white;
-      border-radius: 4px;
-      z-index: 9999;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-      max-width: 400px;
-      animation: yt-enhancer-notification-enter 0.3s ease-out;
-    }
-    
-    .yt-enhancer-notification.success {
-      border-left: 4px solid #4caf50;
-    }
-    
-    .yt-enhancer-notification.error {
-      border-left: 4px solid #f44336;
-    }
-    
-    .yt-enhancer-notification.info {
-      border-left: 4px solid #2196f3;
-    }
-    
-    .yt-enhancer-notification-close {
-      margin-left: auto;
-      cursor: pointer;
-      opacity: 0.7;
-      font-size: 18px;
-      font-weight: bold;
-    }
-    
-    .yt-enhancer-notification-close:hover {
-      opacity: 1;
-    }
-    
-    .yt-enhancer-dashboard-link {
-      color: #8ab4f8;
-      margin-left: 8px;
-      text-decoration: none;
-    }
-    
-    .yt-enhancer-dashboard-link:hover {
-      text-decoration: underline;
-    }
-    
-    .yt-enhancer-notification-hiding {
-      opacity: 0;
-      transition: opacity 0.5s;
-    }
-    
-    @keyframes yt-enhancer-notification-enter {
-      from {
-        transform: translateY(20px);
-        opacity: 0;
-      }
-      to {
-        transform: translateY(0);
-        opacity: 1;
-      }
-    }
-  `;
-  
-  document.head.appendChild(styleElement);
+  // The styles are now loaded from the content.css file
+  // This function remains for backward compatibility
+  console.log('Styles loaded from content.css');
 }
 
 // Listen for messages from the background script

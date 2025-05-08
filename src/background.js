@@ -4,11 +4,14 @@ const CLIENT_ID = '304162096302-c470kd77du16s0lrlumobc6s8u6uleng.apps.googleuser
 const REDIRECT_URI = chrome.identity.getRedirectURL();
 const SCOPES = ['https://www.googleapis.com/auth/youtube.force-ssl',
                 'https://www.googleapis.com/auth/userinfo.email'];
+
 // Token storage keys
 const TOKEN_STORAGE_KEY = 'youtube_enhancer_token';
 const TOKEN_EXPIRY_KEY = 'youtube_enhancer_token_expiry';
 const USER_EMAIL_KEY = 'youtube_enhancer_email';
 const LIKED_VIDEOS_KEY = 'youtube_enhancer_liked_videos';
+const NEXT_PAGE_TOKEN_KEY = 'youtube_enhancer_next_page_token';
+const TOTAL_RESULTS_KEY = 'youtube_enhancer_total_results';
 
 // Authentication status
 let isAuthenticated = false;
@@ -59,9 +62,36 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
   
+  else if (request.action === 'getMoreLikedVideos') {
+    const { pageToken } = request;
+    getMoreLikedVideos(pageToken).then(result => {
+      // Update stored videos with new batch
+      updateStoredVideos(result.videos).then(() => {
+        sendResponse({ 
+          videos: result.videos,
+          nextPageToken: result.nextPageToken,
+          totalResults: result.totalResults
+        });
+      });
+    }).catch(error => {
+      sendResponse({ error: error.message });
+    });
+    return true;
+  }
+  
   else if (request.action === 'getStoredVideos') {
-    getStoredVideos().then(videos => {
-      sendResponse({ videos });
+    getStoredVideos().then(result => {
+      sendResponse(result);
+    });
+    return true;
+  }
+  
+  else if (request.action === 'deleteVideos') {
+    const { videoIds } = request;
+    deleteVideos(videoIds).then(() => {
+      sendResponse({ success: true });
+    }).catch(error => {
+      sendResponse({ error: error.message });
     });
     return true;
   }
@@ -72,6 +102,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }).catch(error => {
       sendResponse({ error: error.message });
     });
+    return true;
+  }
+  
+  else if (request.action === 'openDashboard') {
+    chrome.tabs.create({ url: chrome.runtime.getURL("index.html") });
+    sendResponse({ success: true });
     return true;
   }
   
@@ -182,7 +218,14 @@ async function authenticateUser() {
 async function logoutUser() {
   try {
     // Clear stored credentials and videos
-    await chrome.storage.local.remove([TOKEN_STORAGE_KEY, TOKEN_EXPIRY_KEY, USER_EMAIL_KEY, LIKED_VIDEOS_KEY]);
+    await chrome.storage.local.remove([
+      TOKEN_STORAGE_KEY, 
+      TOKEN_EXPIRY_KEY, 
+      USER_EMAIL_KEY, 
+      LIKED_VIDEOS_KEY,
+      NEXT_PAGE_TOKEN_KEY,
+      TOTAL_RESULTS_KEY
+    ]);
     
     isAuthenticated = false;
     console.log('User logged out successfully');
@@ -197,7 +240,7 @@ async function logoutUser() {
   }
 }
 
-// Get liked videos from YouTube API
+// Get liked videos from YouTube API - first page
 async function getLikedVideos() {
   try {
     if (!isAuthenticated) {
@@ -212,13 +255,16 @@ async function getLikedVideos() {
       throw new Error('No access token found');
     }
     
-    console.log('Fetching liked videos...');
+    console.log('Fetching liked videos (first page)...');
     
-    const response = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&myRating=like&maxResults=50`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
+    const response = await fetch(
+      `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&myRating=like&maxResults=50`, 
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       }
-    });
+    );
     
     if (!response.ok) {
       throw new Error(`YouTube API error: ${response.status} ${response.statusText}`);
@@ -227,12 +273,93 @@ async function getLikedVideos() {
     const data = await response.json();
     console.log('Liked videos fetched:', data);
     
-    return data.items;
+    // Store the next page token if available
+    if (data.nextPageToken) {
+      await storeNextPageToken(data.nextPageToken);
+    } else {
+      // Clear next page token if there isn't one
+      await chrome.storage.local.remove(NEXT_PAGE_TOKEN_KEY);
+    }
+    
+    // Store total results count
+    if (data.pageInfo && data.pageInfo.totalResults) {
+      await storeTotalResults(data.pageInfo.totalResults);
+    }
+    
+    return data.items || [];
   } catch (error) {
     console.error('Error fetching liked videos:', error);
     
     // If the error is due to expired token, attempt to re-authenticate
-    if (error.message.includes('401')) {
+    if (error.message && error.message.includes('401')) {
+      isAuthenticated = false;
+      chrome.runtime.sendMessage({ action: 'authStatus', isAuthenticated: false, reason: 'token_expired' });
+    }
+    
+    throw error;
+  }
+}
+
+// Get additional pages of liked videos
+async function getMoreLikedVideos(pageToken) {
+  try {
+    if (!isAuthenticated) {
+      await checkAuthStatus();
+      if (!isAuthenticated) {
+        throw new Error('User is not authenticated');
+      }
+    }
+    
+    const token = await getStoredToken();
+    if (!token) {
+      throw new Error('No access token found');
+    }
+    
+    if (!pageToken) {
+      // If no page token provided, try to get from storage
+      pageToken = await getStoredNextPageToken();
+      
+      if (!pageToken) {
+        throw new Error('No more videos to fetch');
+      }
+    }
+    
+    console.log('Fetching more liked videos with page token:', pageToken);
+    
+    const response = await fetch(
+      `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&myRating=like&maxResults=50&pageToken=${pageToken}`, 
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      }
+    );
+    
+    if (!response.ok) {
+      throw new Error(`YouTube API error: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    console.log('Additional liked videos fetched:', data);
+    
+    // Store the next page token if available
+    if (data.nextPageToken) {
+      await storeNextPageToken(data.nextPageToken);
+    } else {
+      // Clear next page token if there isn't one
+      await chrome.storage.local.remove(NEXT_PAGE_TOKEN_KEY);
+    }
+    
+    return {
+      videos: data.items || [],
+      nextPageToken: data.nextPageToken || null,
+      totalResults: data.pageInfo ? data.pageInfo.totalResults : null
+    };
+  } catch (error) {
+    console.error('Error fetching more liked videos:', error);
+    
+    // If the error is due to expired token, attempt to re-authenticate
+    if (error.message && error.message.includes('401')) {
       isAuthenticated = false;
       chrome.runtime.sendMessage({ action: 'authStatus', isAuthenticated: false, reason: 'token_expired' });
     }
@@ -259,13 +386,71 @@ async function storeVideos(videos) {
   }
 }
 
+// Update stored videos by adding more
+async function updateStoredVideos(newVideos) {
+  try {
+    // Get existing videos
+    const existingData = await getStoredVideos();
+    const existingVideos = existingData.items || [];
+    
+    // Combine existing and new videos
+    const combinedVideos = [...existingVideos, ...newVideos];
+    
+    // Add fetch timestamp to the videos data
+    const videosData = {
+      items: combinedVideos,
+      fetchedAt: new Date().toISOString()
+    };
+    
+    await chrome.storage.local.set({ [LIKED_VIDEOS_KEY]: videosData });
+    console.log('Updated videos stored in local storage');
+    return true;
+  } catch (error) {
+    console.error('Error updating stored videos:', error);
+    return false;
+  }
+}
+
 // Get stored videos from local storage
 async function getStoredVideos() {
   return new Promise((resolve) => {
-    chrome.storage.local.get(LIKED_VIDEOS_KEY, (result) => {
-      resolve(result[LIKED_VIDEOS_KEY] || { items: [] });
+    chrome.storage.local.get([LIKED_VIDEOS_KEY, NEXT_PAGE_TOKEN_KEY, TOTAL_RESULTS_KEY], (result) => {
+      resolve({
+        videos: result[LIKED_VIDEOS_KEY] || { items: [] },
+        nextPageToken: result[NEXT_PAGE_TOKEN_KEY] || null,
+        totalResults: result[TOTAL_RESULTS_KEY] || 0
+      });
     });
   });
+}
+
+// Delete specific videos (remove from storage)
+async function deleteVideos(videoIds) {
+  try {
+    if (!videoIds || videoIds.length === 0) {
+      throw new Error('No video IDs provided');
+    }
+    
+    // Get existing videos
+    const existingData = await getStoredVideos();
+    const existingVideos = existingData.videos.items || [];
+    
+    // Filter out the videos to be deleted
+    const filteredVideos = existingVideos.filter(video => !videoIds.includes(video.id));
+    
+    // Update storage with filtered videos
+    const videosData = {
+      items: filteredVideos,
+      fetchedAt: new Date().toISOString()
+    };
+    
+    await chrome.storage.local.set({ [LIKED_VIDEOS_KEY]: videosData });
+    console.log(`Deleted ${videoIds.length} videos from storage`);
+    return true;
+  } catch (error) {
+    console.error('Error deleting videos:', error);
+    throw error;
+  }
 }
 
 // Delete all liked videos (clear from storage)
@@ -343,4 +528,20 @@ async function getUserEmail() {
       resolve(result[USER_EMAIL_KEY] || 'AxelNash4@gmail.com');
     });
   });
+}
+
+function storeNextPageToken(token) {
+  return chrome.storage.local.set({ [NEXT_PAGE_TOKEN_KEY]: token });
+}
+
+async function getStoredNextPageToken() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(NEXT_PAGE_TOKEN_KEY, (result) => {
+      resolve(result[NEXT_PAGE_TOKEN_KEY]);
+    });
+  });
+}
+
+function storeTotalResults(count) {
+  return chrome.storage.local.set({ [TOTAL_RESULTS_KEY]: count });
 }
