@@ -17,7 +17,7 @@ function init() {
   
   // Check if we're on the YouTube liked videos page
   if (isLikedVideosPage()) {
-    injectFetchButton();
+    setTimeout(injectFetchButton, 1000);
   }
   
   // Set up an observer to detect page changes
@@ -63,13 +63,83 @@ function injectFetchButton() {
   // Look for the line where we want to inject (between header and playlist items)
   const targetContainer = findButtonContainer();
   if (!targetContainer) {
-    console.warn('Could not find target container for fetch button');
-    // Try again after a short delay
-    setTimeout(injectFetchButton, 1000);
+    console.warn('Could not find target container for fetch button, trying alternative methods');
+    
+    // Try alternative methods to find the container
+    const alternativeContainer = document.querySelector('ytd-playlist-header-renderer #stats');
+    if (alternativeContainer) {
+      insertButtonNearElement(alternativeContainer);
+      return;
+    }
+    
+    // If still not found, try again after a delay
+    setTimeout(injectFetchButton, 1500);
     return;
   }
   
-  // Create the button with icon
+  insertButtonInContainer(targetContainer);
+}
+
+// Find the appropriate container for the fetch button
+function findButtonContainer() {
+  // Try multiple selectors to find a suitable container
+  const selectors = [
+    'ytd-playlist-header-renderer #top-row',
+    'ytd-playlist-header-renderer #stats',
+    'ytd-playlist-sidebar-primary-info-renderer',
+    '#playlist-actions'
+  ];
+  
+  for (const selector of selectors) {
+    const container = document.querySelector(selector);
+    if (container) {
+      return container;
+    }
+  }
+  
+  return null;
+}
+
+// Insert button near a specific element
+function insertButtonNearElement(element) {
+  if (!element) return;
+  
+  // Create button wrapper
+  const buttonWrapper = document.createElement('div');
+  buttonWrapper.className = 'yt-enhancer-btn-wrapper';
+  
+  // Create the button
+  const fetchButton = createFetchButton();
+  buttonWrapper.appendChild(fetchButton);
+  
+  // Insert after the target element
+  if (element.parentNode) {
+    element.parentNode.insertBefore(buttonWrapper, element.nextSibling);
+  }
+}
+
+// Insert button in a container
+function insertButtonInContainer(container) {
+  if (!container) return;
+  
+  // Create button wrapper
+  const buttonWrapper = document.createElement('div');
+  buttonWrapper.className = 'yt-enhancer-btn-wrapper';
+  
+  // Create the button
+  const fetchButton = createFetchButton();
+  buttonWrapper.appendChild(fetchButton);
+  
+  // Insert at the beginning or end of the container based on its contents
+  if (container.firstChild) {
+    container.insertBefore(buttonWrapper, container.firstChild);
+  } else {
+    container.appendChild(buttonWrapper);
+  }
+}
+
+// Create the fetch button element
+function createFetchButton() {
   const fetchButton = document.createElement('button');
   fetchButton.id = 'yt-enhancer-fetch-btn';
   fetchButton.className = 'yt-enhancer-btn';
@@ -82,40 +152,7 @@ function injectFetchButton() {
     Fetch Liked Videos
   `;
   fetchButton.addEventListener('click', handleFetchButtonClick);
-  
-  // Create a wrapper div to match YouTube's layout
-  const buttonWrapper = document.createElement('div');
-  buttonWrapper.className = 'yt-enhancer-btn-wrapper';
-  buttonWrapper.appendChild(fetchButton);
-  
-  // Add the button to the page
-  targetContainer.appendChild(buttonWrapper);
-  
-  // Add custom styles
-  injectStyles();
-}
-
-// Find the appropriate container for the fetch button
-function findButtonContainer() {
-  // The red line in the image is right below the playlist header and right above the videos list
-  // Look for the container that has the Shuffle/Play All buttons
-  const header = document.querySelector('ytd-playlist-header-renderer');
-  if (header) {
-    // Try to find the line where we want to inject (between header and playlist items)
-    const actionsRow = header.querySelector('#top-row');
-    if (actionsRow) {
-      return actionsRow;
-    }
-    
-    // Alternative: find the stats section which is right above the videos
-    const statsSection = header.querySelector('#stats');
-    if (statsSection) {
-      return statsSection.parentElement;
-    }
-  }
-  
-  // Fallback: try to find another suitable container
-  return document.querySelector('ytd-playlist-sidebar-renderer');
+  return fetchButton;
 }
 
 // Handle the fetch button click
@@ -225,7 +262,6 @@ function showNotification(message, type = 'info', showDashboardLink = false) {
 // Inject custom styles
 function injectStyles() {
   // The styles are now loaded from the content.css file
-  // This function remains for backward compatibility
   console.log('Styles loaded from content.css');
 }
 

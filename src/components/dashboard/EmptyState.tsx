@@ -25,7 +25,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         or click refresh to check again.
       </p>
       {onRefresh && (
-        <Button onClick={onRefresh} disabled={isLoading}>
+        <Button onClick={onRefresh} disabled={isLoading} variant="secondary">
           <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
