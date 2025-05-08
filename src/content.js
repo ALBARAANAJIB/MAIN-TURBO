@@ -31,7 +31,7 @@ function isLikedVideosPage() {
 
 // Set up an observer to detect YouTube SPA navigation
 function setupNavigationObserver() {
-  // Create a new observer for the URL changes
+  // Create a new observer instance
   const observer = new MutationObserver(() => {
     if (currentUrl !== window.location.href) {
       currentUrl = window.location.href;
@@ -60,68 +60,62 @@ function injectFetchButton() {
     return;
   }
   
-  // Look for the line where we want to inject (between header and playlist items)
-  const targetContainer = findButtonContainer();
-  if (!targetContainer) {
-    console.warn('Could not find target container for fetch button, trying alternative methods');
-    
-    // Try alternative methods to find the container
-    const alternativeContainer = document.querySelector('ytd-playlist-header-renderer #stats');
-    if (alternativeContainer) {
-      insertButtonNearElement(alternativeContainer);
-      return;
-    }
-    
-    // If still not found, try again after a delay
-    setTimeout(injectFetchButton, 1500);
-    return;
-  }
+  console.log('Trying to inject fetch button...');
   
-  insertButtonInContainer(targetContainer);
-}
-
-// Find the appropriate container for the fetch button
-function findButtonContainer() {
-  // Try multiple selectors to find a suitable container
+  // Multiple selectors to try - we'll try each in sequence
   const selectors = [
     'ytd-playlist-header-renderer #top-row',
     'ytd-playlist-header-renderer #stats',
     'ytd-playlist-sidebar-primary-info-renderer',
-    '#playlist-actions'
+    '#playlist-actions',
+    '.metadata-buttons-wrapper',
+    '#top-level-buttons-computed',
+    '.ytd-menu-renderer',
+    'ytd-playlist-header-renderer',
+    '.playlist-header-stats'
   ];
   
+  let targetContainer = null;
+  
+  // Try each selector
   for (const selector of selectors) {
-    const container = document.querySelector(selector);
-    if (container) {
-      return container;
+    const element = document.querySelector(selector);
+    if (element) {
+      console.log('Found target container with selector:', selector);
+      targetContainer = element;
+      break;
     }
   }
   
-  return null;
-}
-
-// Insert button near a specific element
-function insertButtonNearElement(element) {
-  if (!element) return;
+  // If still not found, try a more general approach
+  if (!targetContainer) {
+    console.log('Trying alternative injection method...');
+    
+    // Look for any prominent UI element on the playlist page
+    const playlistHeader = document.querySelector('ytd-playlist-header-renderer');
+    if (playlistHeader) {
+      const actionBar = playlistHeader.querySelector('#menu-container') || 
+                        playlistHeader.querySelector('.metadata-buttons-wrapper') || 
+                        playlistHeader;
+      
+      console.log('Found alternative container:', actionBar);
+      targetContainer = actionBar;
+    }
+  }
   
-  // Create button wrapper
-  const buttonWrapper = document.createElement('div');
-  buttonWrapper.className = 'yt-enhancer-btn-wrapper';
-  
-  // Create the button
-  const fetchButton = createFetchButton();
-  buttonWrapper.appendChild(fetchButton);
-  
-  // Insert after the target element
-  if (element.parentNode) {
-    element.parentNode.insertBefore(buttonWrapper, element.nextSibling);
+  // If we found a target, inject the button
+  if (targetContainer) {
+    console.log('Injecting button into container:', targetContainer);
+    insertButton(targetContainer);
+  } else {
+    console.warn('Could not find a suitable container for the fetch button');
+    // Try again after a delay
+    setTimeout(injectFetchButton, 2000);
   }
 }
 
-// Insert button in a container
-function insertButtonInContainer(container) {
-  if (!container) return;
-  
+// Insert the button into a container
+function insertButton(container) {
   // Create button wrapper
   const buttonWrapper = document.createElement('div');
   buttonWrapper.className = 'yt-enhancer-btn-wrapper';
@@ -130,12 +124,14 @@ function insertButtonInContainer(container) {
   const fetchButton = createFetchButton();
   buttonWrapper.appendChild(fetchButton);
   
-  // Insert at the beginning or end of the container based on its contents
+  // Add to container - try different positions
   if (container.firstChild) {
     container.insertBefore(buttonWrapper, container.firstChild);
   } else {
     container.appendChild(buttonWrapper);
   }
+  
+  console.log('Fetch button injected successfully');
 }
 
 // Create the fetch button element
@@ -259,10 +255,65 @@ function showNotification(message, type = 'info', showDashboardLink = false) {
   }, 5000);
 }
 
-// Inject custom styles
+// Update content.css
 function injectStyles() {
-  // The styles are now loaded from the content.css file
-  console.log('Styles loaded from content.css');
+  const styles = document.createElement('style');
+  styles.textContent = `
+    .yt-enhancer-btn-wrapper {
+      display: inline-flex;
+      align-items: center;
+      margin: 8px;
+    }
+    
+    .yt-enhancer-btn {
+      background-color: rgba(255, 0, 0, 0.9);
+      color: white;
+      border: none;
+      border-radius: 18px;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+      font-family: 'Roboto', sans-serif;
+      height: 36px;
+    }
+    
+    .yt-enhancer-btn:hover {
+      background-color: #cc0000;
+      transform: translateY(-1px);
+    }
+    
+    .yt-enhancer-btn:active {
+      transform: scale(0.98);
+    }
+    
+    .yt-enhancer-notification {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 14px 18px;
+      background: rgba(33, 33, 33, 0.97);
+      color: white;
+      border-radius: 8px;
+      z-index: 9999;
+      font-size: 14px;
+      font-family: 'Roboto', sans-serif;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      max-width: 400px;
+      animation: yt-enhancer-notification-enter 0.3s ease-out;
+    }
+    
+    /* Add more styles as needed */
+  `;
+  
+  document.head.appendChild(styles);
 }
 
 // Listen for messages from the background script
@@ -279,3 +330,5 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // Initialize the content script
 init();
+// Try to inject styles directly
+injectStyles();
