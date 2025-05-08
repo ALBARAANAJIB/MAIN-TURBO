@@ -4,9 +4,9 @@
 .yt-enhancer-btn-wrapper {
   display: flex;
   align-items: center;
-  margin-top: 8px;
-  margin-bottom: 8px;
-  margin-right: 8px;
+  margin: 8px;
+  position: relative;
+  z-index: 100;
 }
 
 .yt-enhancer-btn {
@@ -21,17 +21,21 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
   font-family: 'Roboto', sans-serif;
   height: 36px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .yt-enhancer-btn:hover {
   background-color: #cc0000;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
 }
 
 .yt-enhancer-btn:active {
   transform: scale(0.98);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
 }
 
 .yt-enhancer-btn svg {
@@ -43,17 +47,17 @@
   position: fixed;
   bottom: 24px;
   right: 24px;
-  padding: 14px 18px;
+  padding: 16px 20px;
   background: rgba(33, 33, 33, 0.97);
   color: white;
-  border-radius: 8px;
+  border-radius: 10px;
   z-index: 9999;
   font-size: 14px;
   font-family: 'Roboto', sans-serif;
   display: flex;
   align-items: center;
   gap: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
   max-width: 400px;
   animation: yt-enhancer-notification-enter 0.3s ease-out;
 }
@@ -76,10 +80,13 @@
   opacity: 0.7;
   font-size: 18px;
   font-weight: bold;
+  padding: 2px 8px;
 }
 
 .yt-enhancer-notification-close:hover {
   opacity: 1;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
 }
 
 .yt-enhancer-dashboard-link {
@@ -87,15 +94,21 @@
   margin-left: 8px;
   text-decoration: none;
   font-weight: 500;
+  padding: 4px 10px;
+  background: rgba(138, 180, 248, 0.1);
+  border-radius: 14px;
+  transition: background 0.2s;
 }
 
 .yt-enhancer-dashboard-link:hover {
+  background: rgba(138, 180, 248, 0.2);
   text-decoration: underline;
 }
 
 .yt-enhancer-notification-hiding {
   opacity: 0;
-  transition: opacity 0.5s;
+  transform: translateY(20px);
+  transition: all 0.5s ease-out;
 }
 
 @keyframes yt-enhancer-notification-enter {
